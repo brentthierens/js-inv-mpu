@@ -4,6 +4,7 @@
   "description": "JS bindings for the Invensense MPUxxxx driver",
   "main": "index.js",
   "author": "Brent Thierens",
+  "homepage": "https://github.com/brentthierens/js-inv-mpu",
   "license": "ISC",
   "gypfile": true,
   "scripts": {
