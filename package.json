@@ -1,7 +1,7 @@
 {
   "name": "js-inv-mpu",
   "version": "1.0.1",
-  "description": "JS bindings for the Invensense MPUxxxx driver",
+  "description": "JS bindings for the InvenSense MPUxxxx driver",
   "main": "index.js",
   "author": "Brent Thierens",
   "homepage": "https://github.com/brentthierens/js-inv-mpu",
