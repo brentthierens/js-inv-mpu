@@ -4,4 +4,4 @@ NodeJS module for accessing the DMP and sensor data from the InvenSense motion s
 Based on the official MotionDriver v5. Adapted from `rpicopter/MotionSensorExample`.
 
 ## Adaption for other boards
-If necessary, adjust the defines in `binding.gyp` to math your board.
+If necessary, adjust the defines in `binding.gyp` to match your board.
