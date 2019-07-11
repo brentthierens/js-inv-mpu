@@ -3,6 +3,7 @@
 int dmpReady;
 int16_t sensors;
 uint16_t rate;
+uint16_t dlpf;
 
 float ypr[3];
 float gyro[3];
@@ -102,6 +103,11 @@ Boolean startMpu(const CallbackInfo& info)
 		return Boolean::New(env, false);
 	}
 
+    if (dlpf && mpu_set_lpf(dlpf) != 0) {
+        printf("Failed to set low pass filter!\n");
+        return Boolean::New(env, false);
+    }
+
 	printf("Done, starting measurements.\n");
     pthread_t thread;
     pthread_create(&thread, NULL, readMpu, NULL);
@@ -153,6 +159,8 @@ void* readMpu(void* args)
             accel[i]   = (float)(a[3-i-1])/16384.0;
             compass[i] = (float)(c[3-i-1]);
         }
+
+        usleep(1e6/rate);
     }
 
     return NULL;
@@ -162,6 +170,12 @@ void setSampleFreq(const CallbackInfo& info)
 {
     Number freq = info[0].As<Number>();
     rate = freq.Int32Value();
+}
+
+void setDlpf(const CallbackInfo& info)
+{
+    Number freq = info[0].As<Number>();
+    dlpf = freq.Int32Value();
 }
 
 Array loadInArray(Env env, float *values)
@@ -201,6 +215,7 @@ Object Init(Env env, Object exports)
 {
     exports.Set("startMpu",        Function::New(env, startMpu));
     exports.Set("setSampleFreq",   Function::New(env, setSampleFreq));
+    exports.Set("setDlpf",         Function::New(env, setDlpf));
     exports.Set("getYpr",          Function::New(env, getYpr));
     exports.Set("getGyro",         Function::New(env, getGyro));
     exports.Set("getAccel",        Function::New(env, getAccel));
