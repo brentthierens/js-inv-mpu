@@ -1,6 +1,5 @@
 #include "main.h"
 
-int dmpReady;
 int16_t sensors;
 uint16_t rate;
 uint16_t dlpf;
@@ -10,6 +9,8 @@ float gyro[3];
 float accel[3];
 float compass[3];
 float temp;
+
+bool run;
 
 uint8_t GetGravity(VectorFloat *v, Quaternion *q)
 {
@@ -33,8 +34,6 @@ uint8_t GetYawPitchRoll(float *data, Quaternion *q, VectorFloat *gravity)
 Boolean startMpu(const CallbackInfo& info)
 {
     Env env = info.Env();
-
-    dmpReady=1;
 
 	printf("Initializing MPU...\n");
 	if (mpu_init(NULL) != 0) {
@@ -103,24 +102,21 @@ Boolean startMpu(const CallbackInfo& info)
 		return Boolean::New(env, false);
 	}
 
+    printf("Setting low pass filter!\n");
     if (dlpf && mpu_set_lpf(dlpf) != 0) {
         printf("Failed to set low pass filter!\n");
         return Boolean::New(env, false);
     }
 
-	printf("Done, starting measurements.\n");
-    pthread_t thread;
-    pthread_create(&thread, NULL, readMpu, NULL);
-
+    run = true;
+	printf("Done!\n");
     return Boolean::New(env, true);
 }
 
-void* readMpu(void* args)
+void readMpu(const CallbackInfo& info)
 {
-    if (!dmpReady) {
-        printf("Error: DMP not ready!!\n");
-        return NULL;
-    }
+    Napi::Env env = info.Env();
+    Napi::Function callback = info[0].As<Napi::Function>();
 
     uint8_t fifoCount;
     int16_t g[3];
@@ -131,9 +127,9 @@ void* readMpu(void* args)
     Quaternion q;
     VectorFloat gravity;
 
-    while(true)
+    while(run)
     {
-        while (dmp_read_fifo(g, a, _q, &sensors, &fifoCount) != 0);
+        while (dmp_read_fifo(g, a, _q, &sensors, &fifoCount) != 0) usleep(1e3);
         q = _q;
 
         GetGravity(&gravity, &q);
@@ -160,10 +156,8 @@ void* readMpu(void* args)
             compass[i] = (float)(c[3-i-1]);
         }
 
-        usleep(1e6/rate);
+        callback.Call(env.Global(), { loadInArray(env, accel), loadInArray(env, gyro), loadInArray(env, compass), loadInArray(env, ypr), Number::New(env, temp) });
     }
-
-    return NULL;
 }
 
 void setSampleFreq(const CallbackInfo& info)
@@ -186,41 +180,12 @@ Array loadInArray(Env env, float *values)
     return result;
 }
 
-Array getYpr(const CallbackInfo& info)
-{
-    return loadInArray(info.Env(), ypr);
-}
-
-Array getGyro(const CallbackInfo& info)
-{
-    return loadInArray(info.Env(), gyro);
-}
-
-Array getAccel(const CallbackInfo& info)
-{
-    return loadInArray(info.Env(), accel);
-}
-
-Array getCompass(const CallbackInfo& info)
-{
-    return loadInArray(info.Env(), compass);
-}
-
-Number getTemp(const CallbackInfo& info)
-{
-    return Number::New(info.Env(), temp);
-}
-
 Object Init(Env env, Object exports)
 {
     exports.Set("startMpu",        Function::New(env, startMpu));
+    exports.Set("readMpu",         Function::New(env, readMpu));
     exports.Set("setSampleFreq",   Function::New(env, setSampleFreq));
     exports.Set("setDlpf",         Function::New(env, setDlpf));
-    exports.Set("getYpr",          Function::New(env, getYpr));
-    exports.Set("getGyro",         Function::New(env, getGyro));
-    exports.Set("getAccel",        Function::New(env, getAccel));
-    exports.Set("getCompass",      Function::New(env, getCompass));
-    exports.Set("getTemp",         Function::New(env, getTemp));
 
     return exports;
 }
